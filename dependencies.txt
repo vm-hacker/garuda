@@ -1,0 +1,7 @@
+discord
+numba
+transformers
+pyjokes
+bs4
+torch
+wikipedia-api
