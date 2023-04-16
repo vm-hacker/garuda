@@ -1,3 +1,4 @@
+# Copyright (C) 2023 Venkatesh Mishra
 import discord,random,os,random,time,requests,json,pyjokes,bs4,wikipediaapi,torch
 from datetime import date
 from discord.ext.commands import *
