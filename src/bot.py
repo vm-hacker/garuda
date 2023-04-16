@@ -66,7 +66,7 @@ Hey! Here are all of the commands you can use:
   $expaincode [Explain python code using Garuda's GPT like Machine learning model] ! Still in beta
 
  Gaming related commands:
-  $avgfps [Use Garuda's gaming server to get your average FPS (only correct 90% of the time)]
+  $avgfps [Use Garuda's gaming server to get your average FPS (only correct 90% of the time)] ! Prank command (This command is not real)
 
  Informational based commands:
   $news [Get today's latest headlines from around the world]
