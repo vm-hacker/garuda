@@ -16,7 +16,7 @@ def main():
     for i in range(1):
         install_dependencies()
         print("Deploying Garuda...")
-        os.system("python3 bot.py")
+        os.system("python3 ./src/bot.py")
         print("Done!")
 
 if __name__ == "__main__":
