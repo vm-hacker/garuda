@@ -30,7 +30,6 @@ def get_qt():
     quote = f"{response.json()[0]['q']} - {response.json()[0]['a']}"
     return quote
 
-
 model_name = "sshleifer/distilbart-cnn-12-6"
 tokenizer = BartTokenizer.from_pretrained(model_name)
 model = BartForConditionalGeneration.from_pretrained(model_name)
@@ -95,7 +94,7 @@ Features running in the background:
             greeting_words = ["Bonjour!", "Hej!","Hello!","Namaste!","Konichiwa!","Annyeong Haseyo!","Xin Chao!","Hallo!","Ola!","Hola!","Privet!"]
             await message.channel.send(f" {random.choice(greeting_words)}, I'm Garuda your personal discord AI Assistant")
             rtn = ["Thank you for taking the time to assist me. Is there anything I can do to help you in return?","Thank you for giving me this opportunity for helping you, please let me know how.","Can I offer my assistance in any way?","Is there anything I can do to make your day better?","Please do let me know how can I lend a hand.", "Can I offer my services in any way?"]
-            await message.channel.send(random.choice(rtn)
+            await message.channel.send(random.choice(rtn))
  
         news_words = ['$News',"$NEWS","$news","$nEws","$nEws","$neWs","$newS","$new$"]
         if any(word in message.content for word in news_words):
