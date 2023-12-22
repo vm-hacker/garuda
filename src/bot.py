@@ -194,15 +194,18 @@ Features running in the background:
                 await message.channel.send(response.text)
 
         if message.content.startswith("$explaincode"):
-            await message.channel.send("Analysing code, please wait...")
-            model_name = "sagard21/python-code-explainer"
-            tokenizer = AutoTokenizer.from_pretrained(model_name, padding=True)
-            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-            config = AutoConfig.from_pretrained(model_name)
-            model.eval()
-            pipe = pipeline("summarization", model=model_name, config=config, tokenizer=tokenizer)
-            raw_code = message.content.replace("$explaincode","")
-            await message.channel.send(pipe(raw_code)[0]["summary_text"])
+            try:
+                await message.channel.send("Analysing code, please wait...")
+                model_name = "sagard21/python-code-explainer"
+                tokenizer = AutoTokenizer.from_pretrained(model_name, padding=True)
+                model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+                config = AutoConfig.from_pretrained(model_name)
+                model.eval()
+                pipe = pipeline("summarization", model=model_name, config=config, tokenizer=tokenizer)
+                raw_code = message.content.replace("$explaincode","")
+                await message.channel.send(pipe(raw_code)[0]["summary_text"])
+            except:
+                await message.channel.send(f"Error: Failed to call agent, please try again later.")
 
 
         model_name = "unitary/toxic-bert"
