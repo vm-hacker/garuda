@@ -1,5 +1,5 @@
 # Copyright (C) 2023 Venkatesh Mishra
-import discord,random,os,random,time,requests,json,pyjokes,bs4,wikipediaapi,torch
+import discord,random,os,random,time,requests,json,pyjokes,bs4,torch
 from datetime import date
 from discord.ext.commands import *
 from numba import njit
@@ -192,17 +192,6 @@ Features running in the background:
                 await message.channel.send("**Response truncated due to Discord's message length limits**",len(response.text), "Max: 2000")  # Inform the user
             else:
                 await message.channel.send(response.text)
-
-            """
-            model = genai.GenerativeModel(model_name="gemini-pro",
-                                        generation_config=generation_config,
-                                        safety_settings=safety_settings)
-
-            prompt_parts = message.content.replace("$gpt","")
-            response = model.generate_content(prompt_parts)
-            print(len(response.text))
-
-            await message.channel.send(response.text)"""
 
         if message.content.startswith("$explaincode"):
             await message.channel.send("Analysing code, please wait...")
