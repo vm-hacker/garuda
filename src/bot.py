@@ -4,9 +4,11 @@ from datetime import date
 from discord.ext.commands import *
 from numba import njit
 from transformers import BartTokenizer, BartForConditionalGeneration
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers import pipeline
 from bs4 import BeautifulSoup as soup
 from urllib.request import urlopen
+import google.generativeai as genai
 from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
@@ -19,7 +21,7 @@ client = discord.Client(intents=discord.Intents.all())
 @njit
 @client.event
 async def on_ready():
-    await client.change_presence(activity=discord.Streaming(name='on lichess', url='https://www.twitch.tv/gmhikaru'))
+    await client.change_presence(activity=discord.Streaming(name='chess', url='https://lichess.org/tv'))
     print("Ready!")
     print('\nActive in these guilds/servers:')
     print('\n'.join(guild.name for guild in client.guilds))
@@ -75,7 +77,7 @@ Hey! Here are all of the commands you can use:
   $fb [Write your feedback as a message after using the $fb command. This will help me improve]
 
 Features running in the background:
-1. AI Engine 
+1. AI Engine
 2. Phishing & Malacious url blocker (under development)
  ```""")
 
@@ -95,7 +97,7 @@ Features running in the background:
             await message.channel.send(f" {random.choice(greeting_words)}, I'm Garuda your personal discord AI Assistant")
             rtn = ["Thank you for taking the time to assist me. Is there anything I can do to help you in return?","Thank you for giving me this opportunity for helping you, please let me know how.","Can I offer my assistance in any way?","Is there anything I can do to make your day better?","Please do let me know how can I lend a hand.", "Can I offer my services in any way?"]
             await message.channel.send(random.choice(rtn))
- 
+
         news_words = ['$News',"$NEWS","$news","$nEws","$nEws","$neWs","$newS","$new$"]
         if any(word in message.content for word in news_words):
             nws = ["Sure!, I'll get the latest news for you","Updating you with today's top stories!","Let me find the most important headlines for you!","Fetching today's top headlines for you!","I can fetch the top headlines for you right now!"]
@@ -111,7 +113,7 @@ Features running in the background:
                 await message.channel.send(news.title.text)
                 await message.channel.send(news.pubDate.text)
                 await message.channel.send("-"*60)
-            
+
         if message.content.startswith("$summarize"):
             await message.channel.send("Summarizing your text hang on...")
             text = message.content.replace("$summarize","")
@@ -149,30 +151,58 @@ Features running in the background:
             await message.channel.send(summarize(text))
 
         if message.content.startswith("$gpt"):
-            await message.channel.send("Generating answer, please wait...")
+            await message.channel.send("Generating answer, hang on!")
+            genai.configure(api_key="GOOGLE_AI_STUDIO_API_KEY")
+            generation_config = {
+                "temperature": 0.9,
+                "top_p": 1,
+                "top_k": 1,
+                "max_output_tokens": 600,
+            }
 
+            safety_settings = [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            }
+            ]
 
-            def get_wikipedia_summary(title, language='en', sentences=5):
-                wiki = wikipediaapi.Wikipedia(language)
-                page = wiki.page(title)
-                
-                if not page.exists():
-                    raise ValueError(f"The '{title}' Wikipedia page does not exist.")
-                
-                content = page.summary[:min(sentences * 300, len(page.summary))]
-                
-                model_name = "sshleifer/distilbart-cnn-12-6"
-                summarizer = pipeline("summarization", model=model_name)
+            model = genai.GenerativeModel(model_name="gemini-pro",
+                generation_config=generation_config,
+                safety_settings=safety_settings)
 
-                # Calculate max_length as half of the input length (you can adjust this ratio as needed)
-                max_length = max(len(content) // 2, 50)
-                summary = summarizer(content, min_length=120, max_length=max_length)[0]['summary_text']
-                
-                return summary
+            prompt_parts = message.content.replace("$gpt","")
+            response = model.generate_content(prompt_parts)
 
-            article_title = message.content.replace("$gpt","")
-            summary = get_wikipedia_summary(article_title)
-            await message.channel.send(summary)
+            if len(response.text) > 2000:
+                response_to_send = response.text[:2000]
+                await message.channel.send(response_to_send)
+                await message.channel.send("**Response truncated due to Discord's message length limits**",len(response.text), "Max: 2000")  # Inform the user
+            else:
+                await message.channel.send(response.text)
+
+            """
+            model = genai.GenerativeModel(model_name="gemini-pro",
+                                        generation_config=generation_config,
+                                        safety_settings=safety_settings)
+
+            prompt_parts = message.content.replace("$gpt","")
+            response = model.generate_content(prompt_parts)
+            print(len(response.text))
+
+            await message.channel.send(response.text)"""
 
         if message.content.startswith("$explaincode"):
             await message.channel.send("Analysing code, please wait...")
@@ -186,11 +216,27 @@ Features running in the background:
             await message.channel.send(pipe(raw_code)[0]["summary_text"])
 
 
+        model_name = "unitary/toxic-bert"
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        inputs = tokenizer(message.content, return_tensors="pt")
+
+        outputs = model(**inputs)
+        scores = outputs.logits.softmax(dim=1)  # Convert logits to probabilities
+        toxic_score = scores[0][0].item()  # Extract toxicity probability
+
+        if toxic_score > 0.5:
+            await message.delete()
+            await message.channel.send(f"Message predicted as harmful with a score of {toxic_score} and was blocked")
+        else:
+            pass
+
+
         for i in range(1):
             ads_and_phish = [] # Enter URLS to blacklist
             if any(word in message.content for word in ads_and_phish):
                 await message.delete()
-            
+
             # AI Engine code
             if "me money" in message.content:
                 rtn = ["Work hard and Earn it yourself!","Start a Youtube channel and reach above 1k subs","Start mining Cryptocurrency"]
@@ -229,7 +275,7 @@ Features running in the background:
             lol = ["me a jOk3","me a j0K3","me a JOKE", "me a j0k3","me a joke","tell a joke","a joke","me a Joke","me a JOKE","me a Jok3","me a jok3","me a J0k3","me jok3","me JOKe","me jOke","me j0ke","me joKe","me jok3","me jokE","us a jOk3","us a j0K3","us a JOKE", "us a j0k3","us a joke","us a joke","us a Joke","us a JOKE","us a Jok3","us a jok3","us a J0k3","us a jok3","us a JOKe","us jOke","us j0ke","us joKe","us jok3","us jokE"]
             if any(word in message.content for word in lol):
                 await message.channel.send(pyjokes.get_joke())
-            
+
             ut = ["Garuda bro u there ?","u there bro Garuda ?","Garuda u there ?","u there Garuda ?","Garuda are you there ?","Are you there Garuda ?", "U there man Gaurda","Garuda man you there ?"]
             if any(word in message.content for word in ut):
                 rst = ["Always!","Where else would I go ?","Yep! Always here to serve you."]
@@ -266,7 +312,7 @@ Features running in the background:
             if any(word in message.content for word in just_fine_keywords):
                 rtn = ["Glad to hear that","Glad to hear it!"]
                 await message.channel.send(random.choice(rtn))
-            
+
             nw = ["today's news","the news","the News","THE NEWS","The news"]
             if any(word in message.content for word in nw):
                 nws = ["Sure!, I'll get the latest news for you","Updating you with today's top stories!","Let me find the most important headlines for you!","Fetching today's top headlines for you!","I can fetch the top headlines for you right now!"]
@@ -284,7 +330,7 @@ Features running in the background:
                     await message.channel.send(news.title.text)
                     await message.channel.send(news.pubDate.text)
                     await message.channel.send("-"*60)
-                
+
             life_keywords = [
                 "how's life",
                 "How's life",
@@ -304,11 +350,11 @@ Features running in the background:
                 "Howz your life",
                 "how is your life",
                 "How is your life"
-            ] 
+            ]
 
             if any(word in message.content for word in life_keywords):
                 rtn = ["Life is good!","It's great!, even if it was bad, I would push on.","Nice!, Thank you for your concern"]
                 await message.channel.send(random.choice(rtn))
 
 for i in range(1):
-    client.run('YOUR_DISCORD_BOT_TOKEN')
+    client.run('DISCORD_BOT_TOKEN_HERE')
