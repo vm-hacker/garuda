@@ -226,21 +226,6 @@ Features running in the background:
             if any(word in message.content for word in ads_and_phish):
                 await message.delete()
 
-            # AI Engine code
-            if "me money" in message.content:
-                rtn = ["Work hard and Earn it yourself!","Start a Youtube channel and reach above 1k subs","Start mining Cryptocurrency"]
-                await message.channel.send(random.choice(rtn))
-
-            offense = [] # Enter words to blacklist
-            if any(word in message.content for word in offense):
-                await message.channel.send("Please don't be racist!")
-                await message.delete()
-
-            curse = [] # Enter words to blacklist
-            if any(word in message.content for word in curse):
-                await message.channel.send("Please don't use offensive words!")
-                await message.delete()
-
             sad_words = ["Truamatized","Depressed","D3press3d","S3d","s3d","S3D","screwed","fked up","dead","can't do it","I quit","oh hell no","belted","Belted","BELTED","BELLTEDD","bElted","Fked up","gone case","lazy","depressed","Sad","sad","saad","Saaad","SAD","sAd","saD","S@d","s@d","$ad","$@d","$@@d","s@D","broken","Broken","BROKEN","BRROKEN","broke","BROKE"]
             if any(word in message.content for word in sad_words):
                 qoute = get_qt()
