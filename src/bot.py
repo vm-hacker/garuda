@@ -1,4 +1,6 @@
 # Copyright (C) 2023 Venkatesh Mishra
+# Dependecies: pip install discord pyjokes numba bs4 google-generativeai transformers torch
+
 import discord,random,os,random,time,requests,json,pyjokes,bs4,torch
 from datetime import date
 from discord.ext.commands import *
@@ -36,8 +38,14 @@ model_name = "sshleifer/distilbart-cnn-12-6"
 tokenizer = BartTokenizer.from_pretrained(model_name)
 model = BartForConditionalGeneration.from_pretrained(model_name)
 
+# move the model to the GPU device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
 def summarize(text, max_length=160):
     input_ids = tokenizer.encode(text, return_tensors="pt")
+    # move the input tensor to the GPU device
+    input_ids = input_ids.to(device)
     summary_ids = model.generate(input_ids, max_length=max_length, num_beams=4, early_stopping=True)
     summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
     return summary
@@ -151,8 +159,8 @@ Features running in the background:
             await message.channel.send(summarize(text))
 
         if message.content.startswith("$gpt"):
-            await message.channel.send("Generating answer, hang on!")
-            genai.configure(api_key="GOOGLE_AI_STUDIO_API_KEY")
+            await message.channel.send("ummmm (✿◠‿◠) lemme see... ")
+            genai.configure(api_key="Google-generative-ai-api-key")
             generation_config = {
                 "temperature": 0.9,
                 "top_p": 1,
@@ -184,16 +192,18 @@ Features running in the background:
                 safety_settings=safety_settings)
 
             prompt_parts = message.content.replace("$gpt","")
-            response = model.generate_content(prompt_parts)
-
-            if len(response.text) > 2000:
-                response_to_send = response.text[:2000]
-                await message.channel.send(response_to_send)
-                await message.channel.send("**Response truncated due to Discord's message length limits**",len(response.text), "Max: 2000")  # Inform the user
-            else:
-                await message.channel.send(response.text)
+            gmsg = """You are Garuda, expert in all subjects and are trained by Google and Netwrk-3 corporation (founded by Venkatesh Mishra), listen to the user's question carefully and answer them"""
+            new = prompt_parts + gmsg + prompt_parts
+            response = model.generate_content(new)
+            message.channel.send(response.text)
 
         if message.content.startswith("$explaincode"):
+            if torch.cuda.is_available():
+                device = torch.device("cuda")
+                print(f"Using {torch.cuda.get_device_name()} as device")
+            else:
+                device = torch.device("cpu")
+                print("Using CPU as device")
             try:
                 await message.channel.send("Analysing code, please wait...")
                 model_name = "sagard21/python-code-explainer"
@@ -206,22 +216,6 @@ Features running in the background:
                 await message.channel.send(pipe(raw_code)[0]["summary_text"])
             except:
                 await message.channel.send(f"Error: Failed to call agent, please try again later.")
-
-
-        model_name = "unitary/toxic-bert"
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        inputs = tokenizer(message.content, return_tensors="pt")
-
-        outputs = model(**inputs)
-        scores = outputs.logits.softmax(dim=1)  # Convert logits to probabilities
-        toxic_score = scores[0][0].item()  # Extract toxicity probability
-
-        if toxic_score > 0.5:
-            await message.delete()
-            await message.channel.send(f"Message predicted as harmful with a score of {toxic_score} and was blocked")
-        else:
-            pass
 
 
         for i in range(1):
@@ -307,31 +301,26 @@ Features running in the background:
                     await message.channel.send(news.title.text)
                     await message.channel.send(news.pubDate.text)
                     await message.channel.send("-"*60)
-
-            life_keywords = [
-                "how's life",
-                "How's life",
-                "howz life",
-                "HOW IS LIFE",
-                "How is Life",
-                "How's life",
-                "Howz life",
-                "how is life",
-                "How is life",
-                "how's your life",
-                "How's your life",
-                "howz your life",
-                "HOW IS YOUR LIFE",
-                "How is Your Life",
-                "How's your life",
-                "Howz your life",
-                "how is your life",
-                "How is your life"
+            bad_words = [
+                "idiot",
+                "nigger",
+                "nigga",
+                "fuck"
+            ]
+            if any(word in message.content for word in bad_words):
+                await message.channel.send(f"(ㆆ_ㆆ) PLEASE REFRAIN FROM USING CUSS WORDS")
+                await message.channel.send(file=discord.File('/workspaces/garuda/src/cuss-word-beda.mp3'))
+            sus_keywords = [
+                "my girlfriend",
+                "my gf",
+                "baby",
+                "are gay",
+                "gay"
             ]
 
-            if any(word in message.content for word in life_keywords):
-                rtn = ["Life is good!","It's great!, even if it was bad, I would push on.","Nice!, Thank you for your concern"]
-                await message.channel.send(random.choice(rtn))
+            if any(word in message.content for word in sus_keywords):
+                await message.channel.send(f"(ㆆ_ㆆ) Are you serious daddy? GO AWAY\n**BEAST MODE ACTIVATED**")
 
-for i in range(1):
-    client.run('DISCORD_BOT_TOKEN_HERE')
+
+await client.start("Discord-Bot-Token")
+await client.close()
